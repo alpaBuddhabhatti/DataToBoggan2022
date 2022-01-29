@@ -1,6 +1,7 @@
 {
-	"name": "Pipeline 2",
+	"name": "ABLBCOPYASQL",
 	"properties": {
+		"description": "uisng linked service ",
 		"activities": [
 			{
 				"name": "Copy datafrom Blob to Azure SQL table",
