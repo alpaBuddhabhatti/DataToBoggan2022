@@ -1,0 +1,84 @@
+{
+	"name": "Notebook 2",
+	"properties": {
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "ApacheSparkPool",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "56g",
+			"driverCores": 8,
+			"executorMemory": "56g",
+			"executorCores": 8,
+			"numExecutors": 2,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "aca6f8f1-d817-47bb-9783-b79d634ffb4c"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"enableDebugMode": false,
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "Synapse PySpark"
+			},
+			"language_info": {
+				"name": "sql"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/01debfb8-acc7-4607-855c-56bb0422e8d7/resourceGroups/DataBoboggan/providers/Microsoft.Synapse/workspaces/firstsynapsesorkspace/bigDataPools/ApacheSparkPool",
+				"name": "ApacheSparkPool",
+				"type": "Spark",
+				"endpoint": "https://firstsynapsesorkspace.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/ApacheSparkPool",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "3.1",
+				"nodeCount": 10,
+				"cores": 8,
+				"memory": 56,
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"source": [
+					"IF NOT EXISTS (SELECT * FROM sys.objects O JOIN sys.schemas S ON O.schema_id = S.schema_id WHERE O.NAME = 'test' AND O.TYPE = 'U' AND S.NAME = 'dbo')\r\n",
+					"CREATE TABLE dbo.test\r\n",
+					"    (\r\n",
+					"     [CustomerID] int,\r\n",
+					"     [Product] varchar(100),\r\n",
+					"     [Feedback] varchar(4000)\r\n",
+					"     \r\n",
+					"    )\r\n",
+					"WITH\r\n",
+					"    (\r\n",
+					"    DISTRIBUTION = ROUND_ROBIN,\r\n",
+					"     CLUSTERED COLUMNSTORE INDEX\r\n",
+					"     -- HEAP\r\n",
+					"    )\r\n",
+					"GO\r\n",
+					"\r\n",
+					"COPY INTO dbo.test\r\n",
+					"([CustomerID] ,[Product], [Feedback])\r\n",
+					"FROM 'https://dlgstor.blob.core.windows.net/source/test/Customer Feedback.csv'\r\n",
+					"WITH\r\n",
+					"(\r\n",
+					"    FILE_TYPE = 'PARQUET'\r\n",
+					"    ,MAXERRORS = 0\r\n",
+					"    ,IDENTITY_INSERT = 'OFF'\r\n",
+					")"
+				],
+				"execution_count": 1
+			}
+		]
+	}
+}
