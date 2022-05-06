@@ -1,0 +1,32 @@
+{
+	"name": "Ds_Dedeicatedpool",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "firstsynapsesorkspace-WorkspaceDefaultSqlServer",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"DBName": "dedicatedSQLpool"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlDWTable",
+		"schema": [
+			{
+				"name": "CustomerID",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "Product",
+				"type": "varchar"
+			},
+			{
+				"name": "Feedback",
+				"type": "varchar"
+			}
+		],
+		"typeProperties": {
+			"tableName": "dbo.test4"
+		}
+	}
+}
