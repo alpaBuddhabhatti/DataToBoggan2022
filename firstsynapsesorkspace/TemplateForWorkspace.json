@@ -598,7 +598,7 @@
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
 				"content": {
-					"query": "IF NOT EXISTS (SELECT * FROM sys.objects O JOIN sys.schemas S ON O.schema_id = S.schema_id WHERE O.NAME = 'test2' AND O.TYPE = 'U' AND S.NAME = 'dbo')\nCREATE TABLE dbo.test4\n    (\n     [CustomerID] int,\n     [Product] varchar(100),\n     [Feedback] varchar(4000)   \n    )\n\nGO\n\nCOPY INTO dbo.test4\n([CustomerID] ,[Product], [Feedback])\nFROM 'https://dlgstor.dfs.core.windows.net/source/test/Customer Feedback.csv'\nWITH\n(\n    FILE_TYPE = 'CSV'\n     , FIRSTROW = 2\n    ,IDENTITY_INSERT = 'OFF'\n)",
+					"query": "IF NOT EXISTS (SELECT * FROM sys.objects O JOIN sys.schemas S ON O.schema_id = S.schema_id WHERE O.NAME = 'AzureDemo' AND O.TYPE = 'U' AND S.NAME = 'dbo')\nCREATE TABLE dbo.AzureDemo\n    (\n     [CustomerID] int,\n     [Product] varchar(100),\n     [Feedback] varchar(4000)   \n    )\n\nGO\n\nCOPY INTO dbo.AzureDemo\n([CustomerID] ,[Product], [Feedback])\nFROM 'https://dlgstor.dfs.core.windows.net/source/test/Customer Feedback.csv'\nWITH\n(\n    FILE_TYPE = 'CSV'\n     , FIRSTROW = 2\n    ,IDENTITY_INSERT = 'OFF'\n)\n\n\n-- Select * from dbo.AzureDemo",
 					"metadata": {
 						"language": "sql"
 					},
@@ -613,7 +613,7 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/Notebook 1')]",
+			"name": "[concat(parameters('workspaceName'), '/Notebook_DLG')]",
 			"type": "Microsoft.Synapse/workspaces/notebooks",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
@@ -633,15 +633,15 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "3b4254e4-69ca-4f33-b2d8-f418d43b840f"
+						"spark.autotune.trackingId": "7608e48b-9ed6-4fd9-809c-91f1d05e91e4"
 					}
 				},
 				"metadata": {
 					"saveOutput": true,
 					"enableDebugMode": false,
 					"kernelspec": {
-						"name": "synapse_sparksql",
-						"display_name": "sql"
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
 					},
 					"language_info": {
 						"name": "sql"
@@ -658,7 +658,8 @@
 						"sparkVersion": "3.1",
 						"nodeCount": 10,
 						"cores": 8,
-						"memory": 56
+						"memory": 56,
+						"automaticScaleJobs": false
 					},
 					"sessionKeepAliveTimeout": 30
 				},
@@ -668,7 +669,8 @@
 						"metadata": {
 							"microsoft": {
 								"language": "python"
-							}
+							},
+							"collapsed": false
 						},
 						"source": [
 							"%%pyspark\n",
@@ -688,159 +690,6 @@
 							"##, header=True\n",
 							")\n",
 							"display(df.limit(10))"
-						],
-						"outputs": [],
-						"execution_count": 1
-					}
-				]
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/Notebook 2')]",
-			"type": "Microsoft.Synapse/workspaces/notebooks",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"nbformat": 4,
-				"nbformat_minor": 2,
-				"bigDataPool": {
-					"referenceName": "ApacheSparkPool",
-					"type": "BigDataPoolReference"
-				},
-				"sessionProperties": {
-					"driverMemory": "56g",
-					"driverCores": 8,
-					"executorMemory": "56g",
-					"executorCores": 8,
-					"numExecutors": 2,
-					"conf": {
-						"spark.dynamicAllocation.enabled": "false",
-						"spark.dynamicAllocation.minExecutors": "2",
-						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "652022e6-d090-4db2-94a7-af5c62457882"
-					}
-				},
-				"metadata": {
-					"saveOutput": true,
-					"enableDebugMode": false,
-					"kernelspec": {
-						"name": "synapse_pyspark",
-						"display_name": "Synapse PySpark"
-					},
-					"language_info": {
-						"name": "sql"
-					},
-					"a365ComputeOptions": {
-						"id": "/subscriptions/01debfb8-acc7-4607-855c-56bb0422e8d7/resourceGroups/DataBoboggan/providers/Microsoft.Synapse/workspaces/firstsynapsesorkspace/bigDataPools/ApacheSparkPool",
-						"name": "ApacheSparkPool",
-						"type": "Spark",
-						"endpoint": "https://firstsynapsesorkspace.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/ApacheSparkPool",
-						"auth": {
-							"type": "AAD",
-							"authResource": "https://dev.azuresynapse.net"
-						},
-						"sparkVersion": "3.1",
-						"nodeCount": 10,
-						"cores": 8,
-						"memory": 56
-					},
-					"sessionKeepAliveTimeout": 30
-				},
-				"cells": [
-					{
-						"cell_type": "code",
-						"source": [
-							"IF NOT EXISTS (SELECT * FROM sys.objects O JOIN sys.schemas S ON O.schema_id = S.schema_id WHERE O.NAME = 'test' AND O.TYPE = 'U' AND S.NAME = 'dbo')\r\n",
-							"CREATE TABLE dbo.test2\r\n",
-							"    (\r\n",
-							"     [CustomerID] int,\r\n",
-							"     [Product] varchar(100),\r\n",
-							"     [Feedback] varchar(4000)\r\n",
-							"     \r\n",
-							"    )\r\n",
-							"WITH\r\n",
-							"    (\r\n",
-							"    DISTRIBUTION = ROUND_ROBIN,\r\n",
-							"     CLUSTERED COLUMNSTORE INDEX\r\n",
-							"     -- HEAP\r\n",
-							"    )\r\n",
-							"GO\r\n",
-							"\r\n",
-							"COPY INTO dbo.test\r\n",
-							"([CustomerID] ,[Product], [Feedback])\r\n",
-							"FROM 'https://dlgstor.blob.core.windows.net/source/test/Customer Feedback.csv'\r\n",
-							"WITH\r\n",
-							"(\r\n",
-							"    FILE_TYPE = 'CSV'\r\n",
-							"         ,HEADER_ROW = 2\r\n",
-							"    ,MAXERRORS = 0\r\n",
-							"    ,IDENTITY_INSERT = 'OFF'\r\n",
-							")"
-						],
-						"outputs": [],
-						"execution_count": 1
-					}
-				]
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/Notebook 3')]",
-			"type": "Microsoft.Synapse/workspaces/notebooks",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"nbformat": 4,
-				"nbformat_minor": 2,
-				"bigDataPool": {
-					"referenceName": "ApacheSparkPool",
-					"type": "BigDataPoolReference"
-				},
-				"sessionProperties": {
-					"driverMemory": "56g",
-					"driverCores": 8,
-					"executorMemory": "56g",
-					"executorCores": 8,
-					"numExecutors": 2,
-					"conf": {
-						"spark.dynamicAllocation.enabled": "false",
-						"spark.dynamicAllocation.minExecutors": "2",
-						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "1db19e09-c8bf-4abe-b711-9ebfd3e639ab"
-					}
-				},
-				"metadata": {
-					"saveOutput": true,
-					"enableDebugMode": false,
-					"kernelspec": {
-						"name": "synapse_pyspark",
-						"display_name": "Synapse PySpark"
-					},
-					"language_info": {
-						"name": "scala"
-					},
-					"a365ComputeOptions": {
-						"id": "/subscriptions/01debfb8-acc7-4607-855c-56bb0422e8d7/resourceGroups/DataBoboggan/providers/Microsoft.Synapse/workspaces/firstsynapsesorkspace/bigDataPools/ApacheSparkPool",
-						"name": "ApacheSparkPool",
-						"type": "Spark",
-						"endpoint": "https://firstsynapsesorkspace.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/ApacheSparkPool",
-						"auth": {
-							"type": "AAD",
-							"authResource": "https://dev.azuresynapse.net"
-						},
-						"sparkVersion": "3.1",
-						"nodeCount": 10,
-						"cores": 8,
-						"memory": 56
-					},
-					"sessionKeepAliveTimeout": 30
-				},
-				"cells": [
-					{
-						"cell_type": "code",
-						"source": [
-							"%%spark\n",
-							"val df = spark.read.sqlanalytics(\"SQLDedicatedPoolDemo.dbo.test\") \n",
-							"df.write.mode(\"overwrite\").saveAsTable(\"default.t1\")"
 						],
 						"outputs": [],
 						"execution_count": 1
@@ -885,6 +734,114 @@
 			},
 			"dependsOn": [],
 			"location": "westeurope"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Ds_Dedeicatedpool')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "firstsynapsesorkspace-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": "dedicatedSQLpool"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [
+					{
+						"name": "CustomerID",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "Product",
+						"type": "varchar"
+					},
+					{
+						"name": "Feedback",
+						"type": "varchar"
+					}
+				],
+				"typeProperties": {
+					"tableName": "dbo.test4"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/firstsynapsesorkspace-WorkspaceDefaultSqlServer')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Notebook_DedicatedPool_DL')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "ApacheSparkPool",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "56g",
+					"driverCores": 8,
+					"executorMemory": "56g",
+					"executorCores": 8,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "dc5a58eb-ab8a-4525-adcc-efe8bcd178a7"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "scala"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/01debfb8-acc7-4607-855c-56bb0422e8d7/resourceGroups/DataBoboggan/providers/Microsoft.Synapse/workspaces/firstsynapsesorkspace/bigDataPools/ApacheSparkPool",
+						"name": "ApacheSparkPool",
+						"type": "Spark",
+						"endpoint": "https://firstsynapsesorkspace.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/ApacheSparkPool",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.1",
+						"nodeCount": 10,
+						"cores": 8,
+						"memory": 56,
+						"automaticScaleJobs": false
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"metadata": {
+							"microsoft": {
+								"language": "scala"
+							}
+						},
+						"source": [
+							"%%spark\n",
+							"val df = spark.read.sqlanalytics(\"dedicatedSQLpool.dbo.AzureDemo\") \n",
+							"df.write.mode(\"overwrite\").saveAsTable(\"default.t2\")"
+						],
+						"outputs": [],
+						"execution_count": 2
+					}
+				]
+			},
+			"dependsOn": []
 		}
 	]
 }
