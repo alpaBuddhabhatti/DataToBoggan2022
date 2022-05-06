@@ -15,6 +15,10 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'firstsynapsesorkspace-WorkspaceDefaultSqlServer'"
 		},
+		"LS_KV_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://AZDEV-KV-DEMO.vault.azure.net/"
+		},
 		"LS_SQL_properties_typeProperties_connectionString_secretName": {
 			"type": "string",
 			"defaultValue": "ASQL-CONN"
@@ -22,16 +26,21 @@
 		"firstsynapsesorkspace-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "https://dlgstor.dfs.core.windows.net"
-		},
-		"LS_KV_properties_typeProperties_baseUrl": {
-			"type": "string",
-			"defaultValue": "https://AZDEV-KV-DEMO.vault.azure.net/"
 		}
 	},
 	"variables": {
 		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
 	},
 	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/dedicatedSQLpool')]",
+			"type": "Microsoft.Synapse/workspaces/sqlPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": []
+			},
+			"dependsOn": []
+		},
 		{
 			"name": "[concat(parameters('workspaceName'), '/ABLBCOPYASQL')]",
 			"type": "Microsoft.Synapse/workspaces/pipelines",
@@ -271,6 +280,43 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/DS_ADL')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "firstsynapsesorkspace-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "test",
+						"fileSystem": "source"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/firstsynapsesorkspace-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/DS_ASQL')]",
 			"type": "Microsoft.Synapse/workspaces/datasets",
 			"apiVersion": "2019-06-01-preview",
@@ -362,6 +408,19 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/LS_KV')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureKeyVault",
+				"typeProperties": {
+					"baseUrl": "[parameters('LS_KV_properties_typeProperties_baseUrl')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/LS_SQL')]",
 			"type": "Microsoft.Synapse/workspaces/linkedServices",
 			"apiVersion": "2019-06-01-preview",
@@ -442,10 +501,19 @@
 				"type": "ScheduleTrigger",
 				"typeProperties": {
 					"recurrence": {
-						"frequency": "Hour",
+						"frequency": "Day",
 						"interval": 1,
 						"startTime": "2022-01-29T14:42:00Z",
-						"timeZone": "UTC"
+						"endTime": "2022-05-07T20:52:44Z",
+						"timeZone": "UTC",
+						"schedule": {
+							"minutes": [
+								5
+							],
+							"hours": [
+								10
+							]
+						}
 					}
 				}
 			},
@@ -480,7 +548,7 @@
 					"sources": [
 						{
 							"dataset": {
-								"referenceName": "Dataset1",
+								"referenceName": "DS_ABLB",
 								"type": "DatasetReference"
 							},
 							"name": "source1"
@@ -488,39 +556,24 @@
 					],
 					"sinks": [
 						{
-							"name": "sink1"
+							"dataset": {
+								"referenceName": "DS_ADL",
+								"type": "DatasetReference"
+							},
+							"name": "ADLSINK"
 						}
 					],
 					"transformations": [],
-					"script": "source(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table',\n\tstaged: true) ~> source1\nsource1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tstore: 'cache',\n\tformat: 'inline',\n\toutput: false,\n\tsaveOrder: 1) ~> sink1"
+					"script": "source(output(\n\t\tCustomerID as string,\n\t\t{Product } as string,\n\t\tFeedback as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> source1\nsource1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tColumn_1 as string,\n\t\tColumn_2 as string,\n\t\tColumn_3 as string\n\t),\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tsaveOrder: 1,\n\tformat: 'inline') ~> ADLSINK"
 				}
 			},
 			"dependsOn": [
-				"[concat(variables('workspaceId'), '/datasets/Dataset1')]"
+				"[concat(variables('workspaceId'), '/datasets/DS_ABLB')]",
+				"[concat(variables('workspaceId'), '/datasets/DS_ADL')]"
 			]
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/SQL script 1')]",
-			"type": "Microsoft.Synapse/workspaces/sqlscripts",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"content": {
-					"query": "IF NOT EXISTS (SELECT * FROM sys.objects O JOIN sys.schemas S ON O.schema_id = S.schema_id WHERE O.NAME = 'test2' AND O.TYPE = 'U' AND S.NAME = 'dbo')\nCREATE TABLE dbo.test3\n    (\n     [CustomerID] int,\n     [Product] varchar(100),\n     [Feedback] varchar(4000)   \n    )\n\nGO\n\nCOPY INTO dbo.test\n([CustomerID] ,[Product], [Feedback])\nFROM 'https://dlgstor.dfs.core.windows.net/source/test/Customer Feedback.csv'\nWITH\n(\n    FILE_TYPE = 'CSV'\n     , FIRSTROW = 2\n    ,IDENTITY_INSERT = 'OFF'\n)",
-					"metadata": {
-						"language": "sql"
-					},
-					"currentConnection": {
-						"databaseName": "SQLDedicatedPoolDemo",
-						"poolName": "SQLDedicatedPoolDemo"
-					},
-					"resultLimit": 5000
-				},
-				"type": "SqlQuery"
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/SQLSCRIPT')]",
+			"name": "[concat(parameters('workspaceName'), '/SQLSCRIPT_Serverlesspool')]",
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
@@ -532,6 +585,26 @@
 					"currentConnection": {
 						"databaseName": "master",
 						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL_Script_DedicatedPool')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "IF NOT EXISTS (SELECT * FROM sys.objects O JOIN sys.schemas S ON O.schema_id = S.schema_id WHERE O.NAME = 'test2' AND O.TYPE = 'U' AND S.NAME = 'dbo')\nCREATE TABLE dbo.test4\n    (\n     [CustomerID] int,\n     [Product] varchar(100),\n     [Feedback] varchar(4000)   \n    )\n\nGO\n\nCOPY INTO dbo.test4\n([CustomerID] ,[Product], [Feedback])\nFROM 'https://dlgstor.dfs.core.windows.net/source/test/Customer Feedback.csv'\nWITH\n(\n    FILE_TYPE = 'CSV'\n     , FIRSTROW = 2\n    ,IDENTITY_INSERT = 'OFF'\n)",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "dedicatedSQLpool",
+						"poolName": "dedicatedSQLpool"
 					},
 					"resultLimit": 5000
 				},
@@ -560,15 +633,15 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "b4d09060-eea0-48c6-819e-3885265cbebd"
+						"spark.autotune.trackingId": "3b4254e4-69ca-4f33-b2d8-f418d43b840f"
 					}
 				},
 				"metadata": {
 					"saveOutput": true,
 					"enableDebugMode": false,
 					"kernelspec": {
-						"name": "synapse_pyspark",
-						"display_name": "Synapse PySpark"
+						"name": "synapse_sparksql",
+						"display_name": "sql"
 					},
 					"language_info": {
 						"name": "sql"
@@ -584,14 +657,19 @@
 						},
 						"sparkVersion": "3.1",
 						"nodeCount": 10,
-						"cores": 4,
-						"memory": 28
+						"cores": 8,
+						"memory": 56
 					},
 					"sessionKeepAliveTimeout": 30
 				},
 				"cells": [
 					{
 						"cell_type": "code",
+						"metadata": {
+							"microsoft": {
+								"language": "python"
+							}
+						},
 						"source": [
 							"%%pyspark\n",
 							"blob_account_name = \"dlgstor\"\n",
@@ -797,17 +875,16 @@
 			"location": "westeurope"
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/LS_KV')]",
-			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"name": "[concat(parameters('workspaceName'), '/dedicatedSQLpool')]",
+			"type": "Microsoft.Synapse/workspaces/sqlPools",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
-				"annotations": [],
-				"type": "AzureKeyVault",
-				"typeProperties": {
-					"baseUrl": "[parameters('LS_KV_properties_typeProperties_baseUrl')]"
-				}
+				"collation": "SQL_Latin1_General_CP1_CI_AS",
+				"maxSizeBytes": 263882790666240,
+				"annotations": []
 			},
-			"dependsOn": []
+			"dependsOn": [],
+			"location": "westeurope"
 		}
 	]
 }
