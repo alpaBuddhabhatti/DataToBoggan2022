@@ -4,7 +4,7 @@
 		"description": "uisng linked service ",
 		"activities": [
 			{
-				"name": "Copy datafrom Blob to Azure SQL table",
+				"name": "Copy from Blob to Azure SQL table",
 				"type": "Copy",
 				"dependsOn": [],
 				"policy": {
