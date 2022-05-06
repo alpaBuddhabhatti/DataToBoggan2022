@@ -2,7 +2,7 @@
 	"name": "SQL_Script_DedicatedPool",
 	"properties": {
 		"content": {
-			"query": "IF NOT EXISTS (SELECT * FROM sys.objects O JOIN sys.schemas S ON O.schema_id = S.schema_id WHERE O.NAME = 'test2' AND O.TYPE = 'U' AND S.NAME = 'dbo')\nCREATE TABLE dbo.test4\n    (\n     [CustomerID] int,\n     [Product] varchar(100),\n     [Feedback] varchar(4000)   \n    )\n\nGO\n\nCOPY INTO dbo.test4\n([CustomerID] ,[Product], [Feedback])\nFROM 'https://dlgstor.dfs.core.windows.net/source/test/Customer Feedback.csv'\nWITH\n(\n    FILE_TYPE = 'CSV'\n     , FIRSTROW = 2\n    ,IDENTITY_INSERT = 'OFF'\n)",
+			"query": "IF NOT EXISTS (SELECT * FROM sys.objects O JOIN sys.schemas S ON O.schema_id = S.schema_id WHERE O.NAME = 'AzureDemo' AND O.TYPE = 'U' AND S.NAME = 'dbo')\nCREATE TABLE dbo.AzureDemo\n    (\n     [CustomerID] int,\n     [Product] varchar(100),\n     [Feedback] varchar(4000)   \n    )\n\nGO\n\nCOPY INTO dbo.AzureDemo\n([CustomerID] ,[Product], [Feedback])\nFROM 'https://dlgstor.dfs.core.windows.net/source/test/Customer Feedback.csv'\nWITH\n(\n    FILE_TYPE = 'CSV'\n     , FIRSTROW = 2\n    ,IDENTITY_INSERT = 'OFF'\n)\n\n\n-- Select * from dbo.AzureDemo",
 			"metadata": {
 				"language": "sql"
 			},
