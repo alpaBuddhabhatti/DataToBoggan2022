@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "1db19e09-c8bf-4abe-b711-9ebfd3e639ab"
+				"spark.autotune.trackingId": "0cca1c99-c456-4d59-9832-20d82e400bf1"
 			}
 		},
 		"metadata": {
@@ -50,12 +50,17 @@
 		"cells": [
 			{
 				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "scala"
+					}
+				},
 				"source": [
 					"%%spark\n",
-					"val df = spark.read.sqlanalytics(\"SQLDedicatedPoolDemo.dbo.test\") \n",
+					"val df = spark.read.sqlanalytics(\"SQLDedicatedPoolDemo.dbo.AzureDemo\") \n",
 					"df.write.mode(\"overwrite\").saveAsTable(\"default.t1\")"
 				],
-				"execution_count": 1
+				"execution_count": null
 			}
 		]
 	}
