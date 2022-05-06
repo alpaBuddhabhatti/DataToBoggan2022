@@ -8,14 +8,17 @@
 		"LS_ABLB_connectionString": {
 			"value": ""
 		},
-		"LS_SQL_connectionString": {
-			"value": ""
-		},
 		"firstsynapsesorkspace-WorkspaceDefaultSqlServer_connectionString": {
 			"value": ""
 		},
+		"LS_SQL_properties_typeProperties_connectionString_secretName": {
+			"value": "ASQL-CONN"
+		},
 		"firstsynapsesorkspace-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"value": "https://dlgstor.dfs.core.windows.net"
+		},
+		"LS_KV_properties_typeProperties_baseUrl": {
+			"value": "https://AZDEV-KV-DEMO.vault.azure.net/"
 		}
 	}
 }

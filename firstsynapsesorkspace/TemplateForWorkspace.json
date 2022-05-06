@@ -11,17 +11,21 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'LS_ABLB'"
 		},
-		"LS_SQL_connectionString": {
-			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_SQL'"
-		},
 		"firstsynapsesorkspace-WorkspaceDefaultSqlServer_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'firstsynapsesorkspace-WorkspaceDefaultSqlServer'"
 		},
+		"LS_SQL_properties_typeProperties_connectionString_secretName": {
+			"type": "string",
+			"defaultValue": "ASQL-CONN"
+		},
 		"firstsynapsesorkspace-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "https://dlgstor.dfs.core.windows.net"
+		},
+		"LS_KV_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://AZDEV-KV-DEMO.vault.azure.net/"
 		}
 	},
 	"variables": {
@@ -36,7 +40,7 @@
 				"description": "uisng linked service ",
 				"activities": [
 					{
-						"name": "Copy datafrom Blob to Azure SQL table",
+						"name": "Copy from Blob to Azure SQL table",
 						"type": "Copy",
 						"dependsOn": [],
 						"policy": {
@@ -365,7 +369,14 @@
 				"annotations": [],
 				"type": "AzureSqlDatabase",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_SQL_connectionString')]"
+					"connectionString": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "LS_KV",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "[parameters('LS_SQL_properties_typeProperties_connectionString_secretName')]"
+					}
 				},
 				"connectVia": {
 					"referenceName": "AutoResolveIntegrationRuntime",
@@ -373,7 +384,8 @@
 				}
 			},
 			"dependsOn": [
-				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]",
+				"[concat(variables('workspaceId'), '/linkedServices/LS_KV')]"
 			]
 		},
 		{
@@ -574,7 +586,8 @@
 						"nodeCount": 10,
 						"cores": 4,
 						"memory": 28
-					}
+					},
+					"sessionKeepAliveTimeout": 30
 				},
 				"cells": [
 					{
@@ -652,7 +665,8 @@
 						"nodeCount": 10,
 						"cores": 8,
 						"memory": 56
-					}
+					},
+					"sessionKeepAliveTimeout": 30
 				},
 				"cells": [
 					{
@@ -739,7 +753,8 @@
 						"nodeCount": 10,
 						"cores": 8,
 						"memory": 56
-					}
+					},
+					"sessionKeepAliveTimeout": 30
 				},
 				"cells": [
 					{
@@ -757,23 +772,40 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/SQLDedicatedPoolDemo')]",
-			"type": "Microsoft.Synapse/workspaces/sqlPools",
+			"name": "[concat(parameters('workspaceName'), '/ApacheSparkPool')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
-				"collation": "SQL_Latin1_General_CP1_CI_AS",
-				"maxSizeBytes": 263882790666240,
+				"autoPause": {
+					"enabled": false,
+					"delayInMinutes": 15
+				},
+				"autoScale": {
+					"enabled": true,
+					"maxNodeCount": 8,
+					"minNodeCount": 3
+				},
+				"nodeCount": 10,
+				"nodeSize": "Medium",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.1",
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": false,
 				"annotations": []
 			},
 			"dependsOn": [],
 			"location": "westeurope"
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/ApacheSparkPool')]",
-			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"name": "[concat(parameters('workspaceName'), '/LS_KV')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
-				"annotations": []
+				"annotations": [],
+				"type": "AzureKeyVault",
+				"typeProperties": {
+					"baseUrl": "[parameters('LS_KV_properties_typeProperties_baseUrl')]"
+				}
 			},
 			"dependsOn": []
 		}
