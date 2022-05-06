@@ -17,15 +17,15 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "652022e6-d090-4db2-94a7-af5c62457882"
+				"spark.autotune.trackingId": "b284f354-3b34-425a-a37f-c34e2ae95f9d"
 			}
 		},
 		"metadata": {
 			"saveOutput": true,
 			"enableDebugMode": false,
 			"kernelspec": {
-				"name": "synapse_pyspark",
-				"display_name": "Synapse PySpark"
+				"name": "synapse_sparksql",
+				"display_name": "sql"
 			},
 			"language_info": {
 				"name": "sql"
@@ -51,8 +51,8 @@
 			{
 				"cell_type": "code",
 				"source": [
-					"IF NOT EXISTS (SELECT * FROM sys.objects O JOIN sys.schemas S ON O.schema_id = S.schema_id WHERE O.NAME = 'test' AND O.TYPE = 'U' AND S.NAME = 'dbo')\r\n",
-					"CREATE TABLE dbo.test2\r\n",
+					"IF NOT EXISTS (SELECT * FROM sys.objects O JOIN sys.schemas S ON O.schema_id = S.schema_id WHERE O.NAME = 'test4' AND O.TYPE = 'U' AND S.NAME = 'dbo')\r\n",
+					"CREATE TABLE dbo.test4\r\n",
 					"    (\r\n",
 					"     [CustomerID] int,\r\n",
 					"     [Product] varchar(100),\r\n",
@@ -67,7 +67,7 @@
 					"    )\r\n",
 					"GO\r\n",
 					"\r\n",
-					"COPY INTO dbo.test\r\n",
+					"COPY INTO dbo.test4\r\n",
 					"([CustomerID] ,[Product], [Feedback])\r\n",
 					"FROM 'https://dlgstor.blob.core.windows.net/source/test/Customer Feedback.csv'\r\n",
 					"WITH\r\n",
