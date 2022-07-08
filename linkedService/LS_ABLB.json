@@ -13,6 +13,10 @@
 				},
 				"secretName": "ABLB-CONNECTION"
 			}
+		},
+		"connectVia": {
+			"referenceName": "AutoResolveIntegrationRuntime",
+			"type": "IntegrationRuntimeReference"
 		}
 	}
 }
