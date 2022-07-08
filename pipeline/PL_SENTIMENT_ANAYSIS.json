@@ -137,6 +137,10 @@
 						"value": "@concat('https://azdemostor.blob.core.windows.net/feedback-staging/' ,pipeline().parameters.FileName,'_',variables('FileNameWithTimeStamp'),'.json')",
 						"type": "Expression"
 					},
+					"connectVia": {
+						"referenceName": "AutoResolveIntegrationRuntime",
+						"type": "IntegrationRuntimeReference"
+					},
 					"method": "PUT",
 					"headers": {
 						"x-ms-version": "2017-11-09",
@@ -178,7 +182,7 @@
 						"parameters": {
 							"SpecCode": "'feedback'",
 							"Runtime": "'123456_123456'",
-							"FileName": "'test.csv'"
+							"FileName": "'CustomerFeedbacks.csv'"
 						},
 						"datasetParameters": {
 							"CustomerFeedback": {
