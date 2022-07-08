@@ -14,6 +14,9 @@
 				"type": "string"
 			}
 		},
+		"folder": {
+			"name": "All dss"
+		},
 		"annotations": [],
 		"type": "Binary",
 		"typeProperties": {
