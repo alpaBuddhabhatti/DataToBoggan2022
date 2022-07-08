@@ -4,7 +4,8 @@
 		"annotations": [],
 		"type": "AzureKeyVault",
 		"typeProperties": {
-			"baseUrl": "https://AZDEV-KV-DEMO.vault.azure.net/"
+			"baseUrl": "https://dgs-kv.vault.azure.net/"
 		}
-	}
+	},
+	"type": "Microsoft.DataFactory/factories/linkedservices"
 }
