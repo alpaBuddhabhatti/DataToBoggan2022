@@ -7,40 +7,31 @@
 			"metadata": "Workspace name",
 			"defaultValue": "firstsynapsesorkspace"
 		},
-		"LS_ABLB_connectionString": {
-			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_ABLB'"
-		},
 		"firstsynapsesorkspace-WorkspaceDefaultSqlServer_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'firstsynapsesorkspace-WorkspaceDefaultSqlServer'"
 		},
-		"LS_KV_properties_typeProperties_baseUrl": {
+		"LS_ABLB_properties_typeProperties_connectionString_secretName": {
 			"type": "string",
-			"defaultValue": "https://AZDEV-KV-DEMO.vault.azure.net/"
+			"defaultValue": "ABLB-CONNECTION"
 		},
 		"LS_SQL_properties_typeProperties_connectionString_secretName": {
 			"type": "string",
-			"defaultValue": "ASQL-CONN"
+			"defaultValue": "ASQL-DB-CONNECTION"
 		},
 		"firstsynapsesorkspace-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "https://dlgstor.dfs.core.windows.net"
+		},
+		"LS_KV_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://dgs-kv.vault.azure.net/"
 		}
 	},
 	"variables": {
 		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
 	},
 	"resources": [
-		{
-			"name": "[concat(parameters('workspaceName'), '/dedicatedSQLpool')]",
-			"type": "Microsoft.Synapse/workspaces/sqlPools",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"annotations": []
-			},
-			"dependsOn": []
-		},
 		{
 			"name": "[concat(parameters('workspaceName'), '/ABLBCOPYASQL')]",
 			"type": "Microsoft.Synapse/workspaces/pipelines",
@@ -200,6 +191,274 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/PL_SENTIMENT_ANAYSIS')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Feedback records",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"dataset": {
+								"referenceName": "DS_ABLB_FEEDBACK_IN",
+								"type": "DatasetReference",
+								"parameters": {
+									"SpecCode": {
+										"value": "@pipeline().parameters.SpecCode",
+										"type": "Expression"
+									}
+								}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "For Each Feedback",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Feedback records",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Feedback records').output.value\n\n",
+								"type": "Expression"
+							},
+							"batchCount": 10,
+							"activities": [
+								{
+									"name": "Sentiment Analysis",
+									"type": "WebActivity",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": "https://dsp2021-sentiment.cognitiveservices.azure.com/text/analytics/v3.0/sentiment",
+										"method": "POST",
+										"headers": {
+											"Ocp-Apim-Subscription-Key": "6dbd673a9cf645e89fcb8c0cf1fd751b",
+											"Content-Type": "application/json",
+											"Accept": "application/json"
+										},
+										"body": {
+											"value": "@concat('{\"documents\":[\n\t                     {\n\t\t\t\t\t\t  \"language\": \"en\",\"id\": \"',\n\t                         item().CustomerID ,\n\t\t\t\t\t\t\t'\", \"text\": \"' , item().Feedback ,'\"\n\t\t\t\t\t\t }\n\t\t\t\t\t\t ]\n\t\t\t\t\t\t }')",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "Results",
+									"type": "AppendVariable",
+									"dependsOn": [
+										{
+											"activity": "Sentiment Analysis",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "SentimentAnalysis",
+										"value": {
+											"value": "@json(concat('{\"id\":','\"',activity('Sentiment Analysis').output.documents[0].id,\n'\",\"sentiment\": \"',activity('Sentiment Analysis').output.documents[0].sentiment ,\n'\" }'))",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Writing To blob",
+						"type": "WebActivity",
+						"dependsOn": [
+							{
+								"activity": "For Each Feedback",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Set rundate",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@concat('https://azdemostor.blob.core.windows.net/feedback-staging/' ,pipeline().parameters.FileName,'_',variables('FileNameWithTimeStamp'),'.json')",
+								"type": "Expression"
+							},
+							"connectVia": {
+								"referenceName": "AutoResolveIntegrationRuntime",
+								"type": "IntegrationRuntimeReference"
+							},
+							"method": "PUT",
+							"headers": {
+								"x-ms-version": "2017-11-09",
+								"x-ms-blob-type": "BlockBlob"
+							},
+							"body": {
+								"value": "@variables('SentimentAnalysis')",
+								"type": "Expression"
+							},
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://storage.azure.com/"
+							}
+						}
+					},
+					{
+						"name": "Data Flow",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "Writing To blob",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "1.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "CustomerData",
+								"type": "DataFlowReference",
+								"parameters": {
+									"SpecCode": "'feedback'",
+									"Runtime": "'123456_123456'",
+									"FileName": "'test.csv'"
+								},
+								"datasetParameters": {
+									"CustomerFeedback": {
+										"SpecCode": {
+											"value": "@pipeline().parameters.SpecCode",
+											"type": "Expression"
+										}
+									},
+									"SentimentalAnalysis": {
+										"SpecCode": {
+											"value": "@pipeline().parameters.SpecCode",
+											"type": "Expression"
+										}
+									},
+									"sinkBLOB": {
+										"SpecCode": {
+											"value": "@pipeline().parameters.SpecCode",
+											"type": "Expression"
+										}
+									},
+									"SinkSQLTable": {
+										"TableName": "feedbackreport",
+										"SchemaName": "dbo"
+									}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					},
+					{
+						"name": "Set rundate",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "FileNameWithTimeStamp",
+							"value": {
+								"value": "@substring(replace(replace(replace(pipeline().TriggerTime,'-',''),':',''),'T','_'),0,15)",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"SpecCode": {
+						"type": "string",
+						"defaultValue": "feedback"
+					},
+					"FileName": {
+						"type": "string",
+						"defaultValue": "Customer Feedback"
+					}
+				},
+				"variables": {
+					"SentimentAnalysis": {
+						"type": "Array"
+					},
+					"FileNameWithTimeStamp": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "SentimentAnalysis"
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/DS_ABLB_FEEDBACK_IN')]",
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]",
+				"[concat(variables('workspaceId'), '/dataflows/CustomerData')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/BinaryDatasetForDeleteActivity')]",
 			"type": "Microsoft.Synapse/workspaces/datasets",
 			"apiVersion": "2019-06-01-preview",
@@ -216,6 +475,9 @@
 					"Directory": {
 						"type": "string"
 					}
+				},
+				"folder": {
+					"name": "All dss"
 				},
 				"annotations": [],
 				"type": "Binary",
@@ -245,6 +507,9 @@
 				"linkedServiceName": {
 					"referenceName": "LS_ABLB",
 					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "All dss"
 				},
 				"annotations": [],
 				"type": "DelimitedText",
@@ -280,6 +545,143 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/DS_ABLB_FEEDBACK_IN')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_ABLB",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"SpecCode": {
+						"type": "string",
+						"defaultValue": "feedback"
+					}
+				},
+				"folder": {
+					"name": "SentimentAnalysis"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": "Customer Feedback.csv",
+						"container": {
+							"value": "@concat(dataset().SpecCode,'-in')",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "CustomerID",
+						"type": "String"
+					},
+					{
+						"name": "Product ",
+						"type": "String"
+					},
+					{
+						"name": "Feedback",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/LS_ABLB')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DS_ABLB_FIANL')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_ABLB",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"SpecCode": {
+						"type": "string",
+						"defaultValue": "feedback"
+					}
+				},
+				"folder": {
+					"name": "SentimentAnalysis"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"container": {
+							"value": "@dataset().SpecCode",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/LS_ABLB')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DS_ABLB_JSON')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_ABLB",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"SpecCode": {
+						"type": "string",
+						"defaultValue": "feedback"
+					}
+				},
+				"folder": {
+					"name": "SentimentAnalysis"
+				},
+				"annotations": [],
+				"type": "Json",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": "*.json",
+						"container": {
+							"value": "@concat(dataset().SpecCode,'-staging')",
+							"type": "Expression"
+						}
+					}
+				},
+				"schema": {
+					"type": "object",
+					"properties": {
+						"id": {
+							"type": "string"
+						},
+						"sentiment": {
+							"type": "string"
+						}
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/LS_ABLB')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/DS_ADL')]",
 			"type": "Microsoft.Synapse/workspaces/datasets",
 			"apiVersion": "2019-06-01-preview",
@@ -287,6 +689,9 @@
 				"linkedServiceName": {
 					"referenceName": "firstsynapsesorkspace-WorkspaceDefaultStorage",
 					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "All dss"
 				},
 				"annotations": [],
 				"type": "DelimitedText",
@@ -325,12 +730,55 @@
 					"referenceName": "LS_SQL",
 					"type": "LinkedServiceReference"
 				},
+				"folder": {
+					"name": "All dss"
+				},
 				"annotations": [],
 				"type": "AzureSqlTable",
 				"schema": [],
 				"typeProperties": {
 					"schema": "dbo",
 					"table": "CustomerFeedback"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/LS_SQL')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DS_ASQL_DF')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_SQL",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"TableName": {
+						"type": "string",
+						"defaultValue": "feedbackreport"
+					},
+					"SchemaName": {
+						"type": "string",
+						"defaultValue": "dbo"
+					}
+				},
+				"folder": {
+					"name": "SentimentAnalysis"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().SchemaName",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().TableName",
+						"type": "Expression"
+					}
 				}
 			},
 			"dependsOn": [
@@ -345,6 +793,9 @@
 				"linkedServiceName": {
 					"referenceName": "LS_ABLB",
 					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "All dss"
 				},
 				"annotations": [],
 				"type": "DelimitedText",
@@ -377,11 +828,54 @@
 						"DBName": "SQLDedicatedPoolDemo"
 					}
 				},
+				"folder": {
+					"name": "All dss"
+				},
 				"annotations": [],
 				"type": "AzureSqlDWTable",
 				"schema": [],
 				"typeProperties": {
 					"tableName": "dbo.test"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/firstsynapsesorkspace-WorkspaceDefaultSqlServer')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Ds_Dedeicatedpool')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "firstsynapsesorkspace-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": "dedicatedSQLpool"
+					}
+				},
+				"folder": {
+					"name": "All dss"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [
+					{
+						"name": "CustomerID",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "Product",
+						"type": "varchar"
+					},
+					{
+						"name": "Feedback",
+						"type": "varchar"
+					}
+				],
+				"typeProperties": {
+					"tableName": "dbo.test4"
 				}
 			},
 			"dependsOn": [
@@ -396,7 +890,14 @@
 				"annotations": [],
 				"type": "AzureBlobStorage",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_ABLB_connectionString')]"
+					"connectionString": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "LS_KV",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "[parameters('LS_ABLB_properties_typeProperties_connectionString_secretName')]"
+					}
 				},
 				"connectVia": {
 					"referenceName": "AutoResolveIntegrationRuntime",
@@ -404,21 +905,9 @@
 				}
 			},
 			"dependsOn": [
-				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]",
+				"[concat(variables('workspaceId'), '/linkedServices/LS_KV')]"
 			]
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/LS_KV')]",
-			"type": "Microsoft.Synapse/workspaces/linkedServices",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"annotations": [],
-				"type": "AzureKeyVault",
-				"typeProperties": {
-					"baseUrl": "[parameters('LS_KV_properties_typeProperties_baseUrl')]"
-				}
-			},
-			"dependsOn": []
 		},
 		{
 			"name": "[concat(parameters('workspaceName'), '/LS_SQL')]",
@@ -539,37 +1028,63 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/Dataflow')]",
+			"name": "[concat(parameters('workspaceName'), '/CustomerData')]",
 			"type": "Microsoft.Synapse/workspaces/dataflows",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
+				"folder": {
+					"name": "SentimentAnalysis"
+				},
 				"type": "MappingDataFlow",
 				"typeProperties": {
 					"sources": [
 						{
 							"dataset": {
-								"referenceName": "DS_ABLB",
+								"referenceName": "DS_ABLB_FEEDBACK_IN",
 								"type": "DatasetReference"
 							},
-							"name": "source1"
+							"name": "CustomerFeedback"
+						},
+						{
+							"dataset": {
+								"referenceName": "DS_ABLB_JSON",
+								"type": "DatasetReference"
+							},
+							"name": "SentimentalAnalysis"
 						}
 					],
 					"sinks": [
 						{
 							"dataset": {
-								"referenceName": "DS_ADL",
+								"referenceName": "DS_ABLB_FIANL",
 								"type": "DatasetReference"
 							},
-							"name": "ADLSINK"
+							"name": "sinkBLOB"
+						},
+						{
+							"dataset": {
+								"referenceName": "DS_ASQL_DF",
+								"type": "DatasetReference"
+							},
+							"name": "SinkSQLTable"
 						}
 					],
-					"transformations": [],
-					"script": "source(output(\n\t\tCustomerID as string,\n\t\t{Product } as string,\n\t\tFeedback as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> source1\nsource1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tColumn_1 as string,\n\t\tColumn_2 as string,\n\t\tColumn_3 as string\n\t),\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tsaveOrder: 1,\n\tformat: 'inline') ~> ADLSINK"
+					"transformations": [
+						{
+							"name": "Join"
+						},
+						{
+							"name": "GroupBySentiment"
+						}
+					],
+					"script": "parameters{\n\tSpecCode as string ('feedback'),\n\tRuntime as string ('123456_123456'),\n\tFileName as string ('test.csv')\n}\nsource(output(\n\t\tCustomerID as string,\n\t\t{Product } as string,\n\t\tFeedback as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['*.csv']) ~> CustomerFeedback\nsource(output(\n\t\tid as string,\n\t\tsentiment as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tdocumentForm: 'documentPerLine',\n\tpreferredIntegralType: 'integer',\n\twildcardPaths:['*.json']) ~> SentimentalAnalysis\nCustomerFeedback, SentimentalAnalysis join(CustomerID == id,\n\tjoinType:'inner',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'auto')~> Join\nJoin aggregate(groupBy(sentiment),\n\ttotal = count(sentiment)) ~> GroupBySentiment\nGroupBySentiment sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[(concat($FileName,'_', $Runtime,'.csv'))],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tsaveOrder: 1,\n\tpartitionBy('hash', 1)) ~> sinkBLOB\nJoin sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\tformat: 'table',\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tCustomerID,\n\t\t{Product },\n\t\tFeedback,\n\t\tsentiment\n\t)) ~> SinkSQLTable"
 				}
 			},
 			"dependsOn": [
-				"[concat(variables('workspaceId'), '/datasets/DS_ABLB')]",
-				"[concat(variables('workspaceId'), '/datasets/DS_ADL')]"
+				"[concat(variables('workspaceId'), '/datasets/DS_ABLB_FEEDBACK_IN')]",
+				"[concat(variables('workspaceId'), '/datasets/DS_ABLB_JSON')]",
+				"[concat(variables('workspaceId'), '/datasets/DS_ABLB_FIANL')]",
+				"[concat(variables('workspaceId'), '/datasets/DS_ASQL_DF')]"
 			]
 		},
 		{
@@ -658,8 +1173,7 @@
 						"sparkVersion": "3.1",
 						"nodeCount": 10,
 						"cores": 8,
-						"memory": 56,
-						"automaticScaleJobs": false
+						"memory": 56
 					},
 					"sessionKeepAliveTimeout": 30
 				},
@@ -699,6 +1213,76 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/Notebook_DedicatedPool_DL')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "ApacheSparkPool",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "56g",
+					"driverCores": 8,
+					"executorMemory": "56g",
+					"executorCores": 8,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "1a95761a-4326-4cee-9897-7a8dabd6ae90"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "scala"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/01debfb8-acc7-4607-855c-56bb0422e8d7/resourceGroups/DataBoboggan/providers/Microsoft.Synapse/workspaces/firstsynapsesorkspace/bigDataPools/ApacheSparkPool",
+						"name": "ApacheSparkPool",
+						"type": "Spark",
+						"endpoint": "https://firstsynapsesorkspace.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/ApacheSparkPool",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.1",
+						"nodeCount": 10,
+						"cores": 8,
+						"memory": 56
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"metadata": {
+							"microsoft": {
+								"language": "scala"
+							}
+						},
+						"source": [
+							"%%spark\n",
+							"val df = spark.read.sqlanalytics(\"dedicatedSQLpool.dbo.AzureDemo\") \n",
+							"df.write.mode(\"overwrite\").saveAsTable(\"default.t2\")"
+						],
+						"outputs": [],
+						"execution_count": 2
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/ApacheSparkPool')]",
 			"type": "Microsoft.Synapse/workspaces/bigDataPools",
 			"apiVersion": "2019-06-01-preview",
@@ -724,122 +1308,15 @@
 			"location": "westeurope"
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/dedicatedSQLpool')]",
-			"type": "Microsoft.Synapse/workspaces/sqlPools",
+			"name": "[concat(parameters('workspaceName'), '/LS_KV')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
-				"collation": "SQL_Latin1_General_CP1_CI_AS",
-				"maxSizeBytes": 263882790666240,
-				"annotations": []
-			},
-			"dependsOn": [],
-			"location": "westeurope"
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/Ds_Dedeicatedpool')]",
-			"type": "Microsoft.Synapse/workspaces/datasets",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "firstsynapsesorkspace-WorkspaceDefaultSqlServer",
-					"type": "LinkedServiceReference",
-					"parameters": {
-						"DBName": "dedicatedSQLpool"
-					}
-				},
 				"annotations": [],
-				"type": "AzureSqlDWTable",
-				"schema": [
-					{
-						"name": "CustomerID",
-						"type": "int",
-						"precision": 10
-					},
-					{
-						"name": "Product",
-						"type": "varchar"
-					},
-					{
-						"name": "Feedback",
-						"type": "varchar"
-					}
-				],
+				"type": "AzureKeyVault",
 				"typeProperties": {
-					"tableName": "dbo.test4"
+					"baseUrl": "[parameters('LS_KV_properties_typeProperties_baseUrl')]"
 				}
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/linkedServices/firstsynapsesorkspace-WorkspaceDefaultSqlServer')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/Notebook_DedicatedPool_DL')]",
-			"type": "Microsoft.Synapse/workspaces/notebooks",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"nbformat": 4,
-				"nbformat_minor": 2,
-				"bigDataPool": {
-					"referenceName": "ApacheSparkPool",
-					"type": "BigDataPoolReference"
-				},
-				"sessionProperties": {
-					"driverMemory": "56g",
-					"driverCores": 8,
-					"executorMemory": "56g",
-					"executorCores": 8,
-					"numExecutors": 2,
-					"conf": {
-						"spark.dynamicAllocation.enabled": "false",
-						"spark.dynamicAllocation.minExecutors": "2",
-						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "dc5a58eb-ab8a-4525-adcc-efe8bcd178a7"
-					}
-				},
-				"metadata": {
-					"saveOutput": true,
-					"enableDebugMode": false,
-					"kernelspec": {
-						"name": "synapse_pyspark",
-						"display_name": "Synapse PySpark"
-					},
-					"language_info": {
-						"name": "scala"
-					},
-					"a365ComputeOptions": {
-						"id": "/subscriptions/01debfb8-acc7-4607-855c-56bb0422e8d7/resourceGroups/DataBoboggan/providers/Microsoft.Synapse/workspaces/firstsynapsesorkspace/bigDataPools/ApacheSparkPool",
-						"name": "ApacheSparkPool",
-						"type": "Spark",
-						"endpoint": "https://firstsynapsesorkspace.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/ApacheSparkPool",
-						"auth": {
-							"type": "AAD",
-							"authResource": "https://dev.azuresynapse.net"
-						},
-						"sparkVersion": "3.1",
-						"nodeCount": 10,
-						"cores": 8,
-						"memory": 56,
-						"automaticScaleJobs": false
-					},
-					"sessionKeepAliveTimeout": 30
-				},
-				"cells": [
-					{
-						"cell_type": "code",
-						"metadata": {
-							"microsoft": {
-								"language": "scala"
-							}
-						},
-						"source": [
-							"%%spark\n",
-							"val df = spark.read.sqlanalytics(\"dedicatedSQLpool.dbo.AzureDemo\") \n",
-							"df.write.mode(\"overwrite\").saveAsTable(\"default.t2\")"
-						],
-						"outputs": [],
-						"execution_count": 2
-					}
-				]
 			},
 			"dependsOn": []
 		}
