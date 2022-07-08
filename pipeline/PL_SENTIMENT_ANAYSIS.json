@@ -26,6 +26,16 @@
 							"type": "DelimitedTextReadSettings"
 						}
 					},
+					"dataset": {
+						"referenceName": "DS_ABLB_FEEDBACK_IN",
+						"type": "DatasetReference",
+						"parameters": {
+							"SpecCode": {
+								"value": "@pipeline().parameters.SpecCode",
+								"type": "Expression"
+							}
+						}
+					},
 					"firstRowOnly": false
 				}
 			},
