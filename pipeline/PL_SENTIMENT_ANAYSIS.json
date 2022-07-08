@@ -172,6 +172,39 @@
 				},
 				"userProperties": [],
 				"typeProperties": {
+					"dataflow": {
+						"referenceName": "CustomerData",
+						"type": "DataFlowReference",
+						"parameters": {
+							"SpecCode": "'feedback'",
+							"Runtime": "'123456_123456'",
+							"FileName": "'test.csv'"
+						},
+						"datasetParameters": {
+							"CustomerFeedback": {
+								"SpecCode": {
+									"value": "@pipeline().parameters.SpecCode",
+									"type": "Expression"
+								}
+							},
+							"SentimentalAnalysis": {
+								"SpecCode": {
+									"value": "@pipeline().parameters.SpecCode",
+									"type": "Expression"
+								}
+							},
+							"sinkBLOB": {
+								"SpecCode": {
+									"value": "@pipeline().parameters.SpecCode",
+									"type": "Expression"
+								}
+							},
+							"SinkSQLTable": {
+								"TableName": "feedbackreport",
+								"SchemaName": "dbo"
+							}
+						}
+					},
 					"compute": {
 						"coreCount": 8,
 						"computeType": "General"
