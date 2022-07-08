@@ -8,6 +8,9 @@
 				"DBName": "dedicatedSQLpool"
 			}
 		},
+		"folder": {
+			"name": "All dss"
+		},
 		"annotations": [],
 		"type": "AzureSqlDWTable",
 		"schema": [

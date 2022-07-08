@@ -1,6 +1,10 @@
 {
 	"name": "DS_ASQL_DF",
 	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_SQL",
+			"type": "LinkedServiceReference"
+		},
 		"parameters": {
 			"TableName": {
 				"type": "string",

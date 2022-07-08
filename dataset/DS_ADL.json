@@ -5,6 +5,9 @@
 			"referenceName": "firstsynapsesorkspace-WorkspaceDefaultStorage",
 			"type": "LinkedServiceReference"
 		},
+		"folder": {
+			"name": "All dss"
+		},
 		"annotations": [],
 		"type": "DelimitedText",
 		"typeProperties": {
